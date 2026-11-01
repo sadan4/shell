@@ -21,16 +21,18 @@ ClipRect {
     readonly property int activeWsId: monitor.activeWorkspace?.id ?? 1
     readonly property int activeWsIdx: workspaceIndex(activeWsId)
     readonly property int shown: Math.max(1, Config.bar.workspaces.shown)
+    readonly property bool idBased: Config.bar.workspaces.showUnoccupied && !Config.bar.workspaces.perMonitor
 
     readonly property var wsIds: {
-        if (Config.bar.workspaces.showUnoccupied)
+        if (idBased)
             return Array.from({
                 length: shown
             }, (_, i) => i + 1);
 
         const allMonitors = !Config.bar.workspaces.perMonitor;
+        const showUnoccupied = Config.bar.workspaces.showUnoccupied;
         const ignoredTags = GlobalConfig.bar.workspaces.ignoredTags;
-        const workspaces = Hypr.workspaces.values.filter(w => w.id > 0 && (allMonitors || w.monitor === root.monitor) && (w.id === activeWsId || w.toplevels.values.some(t => !Hypr.isToplevelIgnored(t, ignoredTags))));
+        const workspaces = Hypr.workspaces.values.filter(w => w.id > 0 && (allMonitors || w.monitor === root.monitor) && (showUnoccupied || w.id === activeWsId || w.toplevels.values.some(t => !Hypr.isToplevelIgnored(t, ignoredTags))));
         const currentIdx = workspaces.findIndex(w => w.id === activeWsId);
         if (currentIdx < 0)
             return [];
@@ -46,9 +48,9 @@ ClipRect {
         return wsIds.map(id => workspaces.itemAtIndex(workspaceIndex(id)));
     }
 
-    // Only relevant for when showUnoccupied is true
+    // Only relevant when idBased
     readonly property int groupOffset: {
-        if (!Config.bar.workspaces.showUnoccupied)
+        if (!root.idBased)
             return 0;
         return Math.floor((activeWsId - 1) / shown) * shown;
     }
@@ -56,7 +58,7 @@ ClipRect {
     property real blur: onSpecial ? 1 : 0
 
     function workspaceIndex(id: int): int {
-        if (!Config.bar.workspaces.showUnoccupied)
+        if (!root.idBased)
             return wsIds.indexOf(id);
 
         let index = id - 1;
@@ -122,7 +124,7 @@ ClipRect {
 
             delegate: Workspace {
                 activeWsId: root.activeWsId
-                ws: Config.bar.workspaces.showUnoccupied ? root.groupOffset + index + 1 : modelData
+                ws: root.idBased ? root.groupOffset + index + 1 : modelData
                 monitor: root.monitor
 
                 displayType: Config.bar.workspaces.displayType
@@ -136,7 +138,7 @@ ClipRect {
 
         Loader {
             asynchronous: true
-            opacity: Config.bar.workspaces.showUnoccupied ? 0 : 1
+            opacity: root.idBased ? 0 : 1
             active: opacity > 0
 
             anchors.fill: parent

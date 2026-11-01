@@ -48,6 +48,11 @@ Item {
         return Colours.layer(Colours.palette.m3outlineVariant, 2);
     }
 
+    readonly property int canonWorkspaceNum: {
+        const perMonitor = Hypr.workspaces.values.length / Hypr.monitors.values.length;
+        ws % perMonitor || perMonitor;
+    }
+
     function updateShape(): void {
         const shape = indicator.item as MaterialShape;
         if (!shape)
@@ -111,33 +116,7 @@ Item {
 
         StyledText {
             animate: true
-            text: {
-                if (root.focused) {
-                    const label = root.activeLabel;
-                    if (label)
-                        return label;
-                }
-
-                if (root.focused || root.isOccupied) {
-                    const label = root.occupiedLabel;
-                    if (label)
-                        return label;
-                }
-
-                const label = root.label;
-                if (label)
-                    return label;
-
-                const ws = Hypr.workspaces.values.find(w => w.id === root.ws);
-                const wsName = !ws || ws.name == root.ws ? root.ws : Hypr.trimWsName(ws.name)[0];
-
-                const capitalisation = Config.bar.workspaces.capitalisation;
-                if (capitalisation === BarWorkspaceCapitalisation.Upper)
-                    return String(wsName).toUpperCase();
-                else if (capitalisation === BarWorkspaceCapitalisation.Lower)
-                    return String(wsName).toLowerCase();
-                return wsName;
-            }
+            text: root.canonWorkspaceNum
             color: root.fgColour
             verticalAlignment: Qt.AlignVCenter
             font.family: Tokens.font.workspaces
@@ -184,6 +163,7 @@ Item {
             Layout.alignment: Qt.AlignHCenter | Qt.AlignTop
             Layout.preferredHeight: Tokens.sizes.bar.innerWidth - Tokens.padding.small
             sourceComponent: {
+                return textComponent;
                 if (root.displayType === BarWorkspaceDisplay.Icons)
                     return iconLoaderComponent;
                 if (root.displayType === BarWorkspaceDisplay.Text)
